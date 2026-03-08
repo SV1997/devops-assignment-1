@@ -16,8 +16,8 @@ WORKDIR /app
 
 COPY --from=builder /install /usr/local
 
-COPY app.py .
-COPY requirements.txt .
+COPY . .
+
 
 RUN chown -R appuser:appgroup /app
 

@@ -1,0 +1,5 @@
+.github
+.git
+*.db
+__pycache__
+*.pyc
