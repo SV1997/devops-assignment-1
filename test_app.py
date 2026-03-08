@@ -3,18 +3,26 @@ test_app.py — Pytest suite for ACEest Fitness & Gym Flask API
 """
 import os
 import pytest
+import tempfile
 
-# Use in-memory SQLite so tests never touch a real file
-os.environ["DB_NAME"] = ":memory:"
-
-from app import app, init_db, get_db   # noqa: E402
+import app as app_module
+from app import app, init_db
 
 
 @pytest.fixture(autouse=True)
 def setup_db():
-    """Create all tables before every single test."""
+    """Create a real temp file DB before each test, delete after."""
+    db_fd, db_path = tempfile.mkstemp(suffix=".db")
+    os.close(db_fd)
+
+    # Point the app to this temp file
+    app_module.DB_NAME = db_path
     init_db()
+
     yield
+
+    # Cleanup after test
+    os.unlink(db_path)
 
 
 @pytest.fixture
