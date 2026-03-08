@@ -18,9 +18,9 @@ pipeline {
         stage('Build Environment') {
             steps {
                 echo "Setting up Python virtual environment..."
-                sh '''
-                    python3 -m venv venv
-                    . venv/bin/activate
+                bat '''
+                    python -m venv venv
+                    call venv\\Scripts\\activate.bat
                     pip install --upgrade pip
                     pip install -r requirements.txt
                 '''
@@ -30,8 +30,8 @@ pipeline {
         stage('Lint') {
             steps {
                 echo "Running flake8 syntax check..."
-                sh '''
-                    . venv/bin/activate
+                bat '''
+                    call venv\\Scripts\\activate.bat
                     pip install flake8
                     flake8 app.py --select=E9,F63,F7,F82 --count --show-source --statistics
                 '''
@@ -41,8 +41,9 @@ pipeline {
         stage('Unit Tests') {
             steps {
                 echo "Running Pytest suite..."
-                sh '''
-                    . venv/bin/activate
+                bat '''
+                    call venv\\Scripts\\activate.bat
+                    pip install pytest pytest-cov
                     pytest test_app.py -v --tb=short --junitxml=test-results.xml
                 '''
             }
@@ -55,8 +56,8 @@ pipeline {
 
         stage('Docker Build') {
             steps {
-                echo "Building Docker image: ${IMAGE_NAME}:${IMAGE_TAG}"
-                sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
+                echo "Building Docker image..."
+                bat "docker build -t %IMAGE_NAME%:%IMAGE_TAG% ."
             }
         }
 
@@ -64,10 +65,10 @@ pipeline {
 
     post {
         success {
-            echo "✅ BUILD SUCCEEDED — ACEest image ${IMAGE_NAME}:${IMAGE_TAG} is ready."
+            echo "BUILD SUCCEEDED - ACEest image is ready."
         }
         failure {
-            echo "❌ BUILD FAILED — check logs above for details."
+            echo "BUILD FAILED - check logs above for details."
         }
         always {
             cleanWs()
