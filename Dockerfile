@@ -1,11 +1,11 @@
-# ── Stage 1: Builder ──────────────────────────────────────────────────────────
+# ── Stage 1: Builder ─────────────────────────────────────────────────────────
 FROM python:3.11-slim AS builder
 
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
-
+RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir pytest pytest-cov
 
 # ── Stage 2: Runtime ─────────────────────────────────────────────────────────
 FROM python:3.11-slim
@@ -14,10 +14,10 @@ RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
 
 WORKDIR /app
 
-COPY --from=builder /install /usr/local
+COPY --from=builder /usr/local/lib /usr/local/lib
+COPY --from=builder /usr/local/bin /usr/local/bin
 
 COPY . .
-
 
 RUN chown -R appuser:appgroup /app
 
