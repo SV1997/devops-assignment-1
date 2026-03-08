@@ -7,6 +7,7 @@ on:
     branches: ["**"]
 
 jobs:
+  # ── Stage 1: Lint & Syntax Check ─────────────────────────────────────────
   lint:
     name: "Build & Lint"
     runs-on: ubuntu-latest
@@ -28,11 +29,10 @@ jobs:
 
       - name: Lint with flake8
         run: |
-          # Stop the build if there are Python syntax errors or undefined names
           flake8 app.py --count --select=E9,F63,F7,F82 --show-source --statistics
-          # Warn on style issues (non-blocking)
           flake8 app.py --count --max-line-length=120 --statistics || true
 
+  # ── Stage 2: Build Docker Image ──────────────────────────────────────────
   docker-build:
     name: "Docker Image Assembly"
     runs-on: ubuntu-latest
@@ -60,6 +60,7 @@ jobs:
           path: aceest-image.tar.gz
           retention-days: 1
 
+  # ── Stage 3: Automated Testing ───────────────────────────────────────────
   test:
     name: "Automated Testing (Pytest in Container)"
     runs-on: ubuntu-latest
@@ -80,11 +81,12 @@ jobs:
       - name: Run Pytest inside Docker container
         run: |
           docker run --rm \
+            --entrypoint sh \
             -e DB_NAME=":memory:" \
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
             aceest-fitness:${{ github.sha }} \
-            sh -c "pip install pytest pytest-cov --quiet && pytest test_app.py -v --tb=short --cov=app --cov-report=term-missing"
+            -c "pip install pytest pytest-cov --quiet && pytest test_app.py -v --tb=short --cov=app --cov-report=term-missing"
 
       - name: Upload coverage report
         if: always()
