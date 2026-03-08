@@ -21,7 +21,8 @@ pipeline {
                 echo "Setting up Python virtual environment..."
                 bat """
                     "%PYTHON%" -m venv venv
-                    call venv\\Scripts\\activate.bat && pip install --upgrade pip && pip install -r requirements.txt
+                    venv\\Scripts\\python.exe -m pip install --upgrade pip
+                    venv\\Scripts\\python.exe -m pip install -r requirements.txt
                 """
             }
         }
@@ -30,7 +31,8 @@ pipeline {
             steps {
                 echo "Running flake8 syntax check..."
                 bat """
-                    call venv\\Scripts\\activate.bat && pip install flake8 && flake8 app.py --select=E9,F63,F7,F82 --count --show-source --statistics
+                    venv\\Scripts\\python.exe -m pip install flake8
+                    venv\\Scripts\\flake8.exe app.py --select=E9,F63,F7,F82 --count --show-source --statistics
                 """
             }
         }
@@ -39,7 +41,8 @@ pipeline {
             steps {
                 echo "Running Pytest suite..."
                 bat """
-                    call venv\\Scripts\\activate.bat && pip install pytest pytest-cov && pytest test_app.py -v --tb=short --junitxml=test-results.xml
+                    venv\\Scripts\\python.exe -m pip install pytest pytest-cov
+                    venv\\Scripts\\pytest.exe test_app.py -v --tb=short --junitxml=test-results.xml
                 """
             }
             post {
