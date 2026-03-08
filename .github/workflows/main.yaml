@@ -1,0 +1,95 @@
+name: ACEest CI/CD Pipeline
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  lint:
+    name: "Build & Lint"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install flake8
+
+      - name: Lint with flake8
+        run: |
+          # Stop the build if there are Python syntax errors or undefined names
+          flake8 app.py --count --select=E9,F63,F7,F82 --show-source --statistics
+          # Warn on style issues (non-blocking)
+          flake8 app.py --count --max-line-length=120 --statistics || true
+
+  docker-build:
+    name: "Docker Image Assembly"
+    runs-on: ubuntu-latest
+    needs: lint
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        run: |
+          docker build -t aceest-fitness:${{ github.sha }} .
+          docker images aceest-fitness
+
+      - name: Save image as artifact
+        run: docker save aceest-fitness:${{ github.sha }} | gzip > aceest-image.tar.gz
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: aceest-image.tar.gz
+          retention-days: 1
+
+  test:
+    name: "Automated Testing (Pytest in Container)"
+    runs-on: ubuntu-latest
+    needs: docker-build
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Docker image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Load Docker image
+        run: docker load < aceest-image.tar.gz
+
+      - name: Run Pytest inside Docker container
+        run: |
+          docker run --rm \
+            -e DB_NAME=":memory:" \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            aceest-fitness:${{ github.sha }} \
+            sh -c "pip install pytest pytest-cov --quiet && pytest test_app.py -v --tb=short --cov=app --cov-report=term-missing"
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: .coverage
+          retention-days: 7
