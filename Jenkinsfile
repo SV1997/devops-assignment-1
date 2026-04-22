@@ -2,7 +2,7 @@ pipeline {
     agent any
     environment {
         APP_NAME = 'aceest-fitness'
-        IMAGE_REPO = 'YOUR_DOCKERHUB_USERNAME/aceest-fitness'
+        IMAGE_REPO = 'saharshvashishtha/aceest-fitness'
         IMAGE_TAG = "${BUILD_NUMBER}"
         SONARQUBE_ENV = 'sonarqube-server'
         K8S_NAMESPACE = 'aceest'
