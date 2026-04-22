@@ -1,0 +1,21 @@
+name: ACEest CI-CD
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install flake8 pytest pytest-cov
+      - run: flake8 app.py test_app.py --count --show-source --statistics
+      - run: pytest test_app.py -v --cov=app --cov-report=xml
+      - run: docker build -t aceest-fitness:${{ github.sha }} .

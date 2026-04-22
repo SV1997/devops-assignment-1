@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: aceest-fitness-b
+  namespace: aceest
+spec:
+  selector:
+    app: aceest-fitness
+    variant: b
+  ports:
+    - port: 80
+      targetPort: 5000
