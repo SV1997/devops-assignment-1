@@ -55,7 +55,7 @@ def init_db():
 # ---------- HEALTH ----------
 @app.route("/", methods=["GET"])
 def index():
-    return jsonify({"status": "ok", "app": "ACEest Fitness & Gym API"}), 200
+    return jsonify({"status": "ok", "app": "ACEest Fitness & Gym API 2"}), 200
 
 
 @app.route("/health", methods=["GET"])
