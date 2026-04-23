@@ -14,23 +14,21 @@ pipeline {
         }
 
         stage('Setup and Install') {
-            steps {
-                bat '''
-                python -m venv venv
-                venv\\Scripts\\python -m pip install --upgrade pip
-                venv\\Scripts\\python -m pip install -r requirements.txt
-                venv\\Scripts\\python -m pip install pytest pytest-cov flake8
-                '''
-            }
-        }
+    steps {
+        bat '''
+        python -m venv venv
+        venv\\Scripts\\python -m pip install --upgrade pip
+        venv\\Scripts\\python -m pip install -r requirements.txt
+        venv\\Scripts\\python -m pip install pytest pytest-cov flake8
+        '''
+    }
+}
 
         stage('Lint') {
-            steps {
-                bat '''
-                venv\\Scripts\\python -m flake8 .
-                '''
-            }
-        }
+    steps {
+        bat 'venv\\Scripts\\python -m flake8 --exclude=venv,__pycache__,.git .'
+    }
+}
 
         stage('Test') {
             steps {
