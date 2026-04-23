@@ -14,15 +14,20 @@ pipeline {
         }
 
         stage('Setup and Install') {
-    steps {
-        bat '''
-        python -m venv venv
-        venv\\Scripts\\python -m pip install --upgrade pip
-        venv\\Scripts\\python -m pip install -r requirements.txt
-        venv\\Scripts\\python -m pip install pytest pytest-cov flake8
-        '''
-    }
-}
+            steps {
+                bat '''
+                if exist venv rmdir /s /q venv
+
+                python --version
+                where python
+
+                python -m venv venv
+                venv\\Scripts\\python -m pip install --upgrade pip setuptools wheel
+                venv\\Scripts\\python -m pip install -r requirements.txt
+                venv\\Scripts\\python -m pip install pytest pytest-cov flake8
+                '''
+            }
+        }
 
         stage('Lint') {
             steps {
@@ -50,7 +55,11 @@ pipeline {
 
         stage('Push Docker Image') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
                     bat '''
                     echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
                     docker push %IMAGE_NAME%:%IMAGE_TAG%
@@ -72,7 +81,7 @@ pipeline {
     post {
         failure {
             bat '''
-            kubectl rollout undo deployment/aceest-fitness -n aceest
+            kubectl rollout undo deployment/aceest-fitness -n aceest || exit /b 0
             '''
         }
     }
