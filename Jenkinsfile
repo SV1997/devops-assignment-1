@@ -5,7 +5,6 @@ pipeline {
         IMAGE_NAME = 'saharshvashishtha/aceest-fitness'
         IMAGE_TAG = "${BUILD_NUMBER}"
         PYTHON_EXE = 'C:\\Users\\saharsh vashishtha\\AppData\\Local\\Programs\\Python\\Python312\\python.exe'
-
     }
 
     stages {
@@ -20,10 +19,9 @@ pipeline {
                 bat '''
                 if exist venv rmdir /s /q venv
 
-                python --version
-                where python
+                "%PYTHON_EXE%" --version
+                "%PYTHON_EXE%" -m venv venv
 
-                python -m venv venv
                 venv\\Scripts\\python -m pip install --upgrade pip setuptools wheel
                 venv\\Scripts\\python -m pip install -r requirements.txt
                 venv\\Scripts\\python -m pip install pytest pytest-cov flake8
@@ -83,7 +81,11 @@ pipeline {
     post {
         failure {
             bat '''
-            kubectl rollout undo deployment/aceest-fitness -n aceest || exit /b 0
+            kubectl config current-context >nul 2>&1
+            if %ERRORLEVEL% NEQ 0 exit /b 0
+
+            kubectl rollout undo deployment/aceest-fitness -n aceest
+            if %ERRORLEVEL% NEQ 0 exit /b 0
             '''
         }
     }
