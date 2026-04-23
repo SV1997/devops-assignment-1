@@ -4,6 +4,8 @@ pipeline {
     environment {
         IMAGE_NAME = 'saharshvashishtha/aceest-fitness'
         IMAGE_TAG = "${BUILD_NUMBER}"
+        PYTHON_EXE = 'C:\Users\saharsh vashishtha\AppData\Local\Programs\Python\Python312\python.exe'
+
     }
 
     stages {
