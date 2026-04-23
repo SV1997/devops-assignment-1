@@ -25,10 +25,12 @@ pipeline {
 }
 
         stage('Lint') {
-    steps {
-        bat 'venv\\Scripts\\python -m flake8 --exclude=venv,__pycache__,.git .'
-    }
-}
+            steps {
+                bat '''
+                venv\\Scripts\\python -m flake8 .
+                '''
+            }
+        }
 
         stage('Test') {
             steps {
