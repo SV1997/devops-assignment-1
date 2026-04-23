@@ -87,6 +87,8 @@ def add_client():
     data = request.get_json()
     if not data or not data.get("name"):
         return jsonify({"error": "Name is required"}), 400
+
+    conn = None
     try:
         conn = get_db()
         conn.execute(
@@ -104,10 +106,12 @@ def add_client():
             ),
         )
         conn.commit()
-        conn.close()
         return jsonify({"message": f"Client '{data['name']}' added successfully"}), 201
     except sqlite3.IntegrityError:
         return jsonify({"error": "Client already exists"}), 409
+    finally:
+        if conn:
+            conn.close()
 
 
 @app.route("/clients/<int:client_id>", methods=["PUT"])
