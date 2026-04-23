@@ -5,6 +5,7 @@ pipeline {
         IMAGE_NAME = 'saharshvashishtha/aceest-fitness'
         IMAGE_TAG = "${BUILD_NUMBER}"
         PYTHON_EXE = 'C:\\Users\\saharsh vashishtha\\AppData\\Local\\Programs\\Python\\Python312\\python.exe'
+        KUBECONFIG = 'C:\\Users\\saharsh vashishtha\\.kube\\config'
     }
 
     stages {
@@ -69,29 +70,18 @@ pipeline {
         }
 
         stage('Deploy to Kubernetes') {
-    steps {
-        bat '''
-        minikube status
-        if %ERRORLEVEL% NEQ 0 exit /b 1
+            steps {
+                bat '''
+                kubectl config use-context minikube
+                kubectl config current-context
+                kubectl get ns
+                kubectl get deployment -n aceest
 
-        kubectl config use-context minikube
-        kubectl config current-context
-
-        kubectl get ns aceest >nul 2>&1
-        if %ERRORLEVEL% NEQ 0 kubectl create namespace aceest
-
-        kubectl get deployment aceest-fitness -n aceest >nul 2>&1
-        if %ERRORLEVEL% NEQ 0 (
-            kubectl apply -f k8s/deployment.yaml -n aceest
-            kubectl apply -f k8s/service.yaml -n aceest
-        ) else (
-            kubectl set image deployment/aceest-fitness aceest-fitness=%IMAGE_NAME%:%IMAGE_TAG% -n aceest
-        )
-
-        kubectl rollout status deployment/aceest-fitness -n aceest
-        '''
-    }
-}
+                kubectl set image deployment/aceest-fitness aceest-fitness=%IMAGE_NAME%:%IMAGE_TAG% -n aceest
+                kubectl rollout status deployment/aceest-fitness -n aceest
+                '''
+            }
+        }
     }
 
     post {
