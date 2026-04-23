@@ -69,13 +69,29 @@ pipeline {
         }
 
         stage('Deploy to Kubernetes') {
-            steps {
-                bat '''
-                kubectl set image deployment/aceest-fitness aceest-fitness=%IMAGE_NAME%:%IMAGE_TAG% -n aceest
-                kubectl rollout status deployment/aceest-fitness -n aceest
-                '''
-            }
-        }
+    steps {
+        bat '''
+        minikube status
+        if %ERRORLEVEL% NEQ 0 exit /b 1
+
+        kubectl config use-context minikube
+        kubectl config current-context
+
+        kubectl get ns aceest >nul 2>&1
+        if %ERRORLEVEL% NEQ 0 kubectl create namespace aceest
+
+        kubectl get deployment aceest-fitness -n aceest >nul 2>&1
+        if %ERRORLEVEL% NEQ 0 (
+            kubectl apply -f k8s/deployment.yaml -n aceest
+            kubectl apply -f k8s/service.yaml -n aceest
+        ) else (
+            kubectl set image deployment/aceest-fitness aceest-fitness=%IMAGE_NAME%:%IMAGE_TAG% -n aceest
+        )
+
+        kubectl rollout status deployment/aceest-fitness -n aceest
+        '''
+    }
+}
     }
 
     post {
