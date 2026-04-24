@@ -2,10 +2,13 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = 'saharshvashishtha/aceest-fitness'
+        IMAGE_NAME = 'accest-fitness'
         IMAGE_TAG = "${BUILD_NUMBER}"
+        AWS_REGION = 'eu-north-1'
+        AWS_ACCOUNT_ID = '525409063755'
+        ECR_REPO = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/accest-fitness"
+        EKS_CLUSTER_NAME = 'casual-bluegrass-gopher'
         PYTHON_EXE = 'C:\\Users\\saharsh vashishtha\\AppData\\Local\\Programs\\Python\\Python312\\python.exe'
-        KUBECONFIG = 'C:\\Users\\saharsh vashishtha\\.kube\\config'
     }
 
     stages {
@@ -19,10 +22,8 @@ pipeline {
             steps {
                 bat '''
                 if exist venv rmdir /s /q venv
-
                 "%PYTHON_EXE%" --version
                 "%PYTHON_EXE%" -m venv venv
-
                 venv\\Scripts\\python -m pip install --upgrade pip setuptools wheel
                 venv\\Scripts\\python -m pip install -r requirements.txt
                 venv\\Scripts\\python -m pip install pytest pytest-cov flake8
@@ -32,17 +33,13 @@ pipeline {
 
         stage('Lint') {
             steps {
-                bat '''
-                venv\\Scripts\\python -m flake8 .
-                '''
+                bat 'venv\\Scripts\\python -m flake8 .'
             }
         }
 
         stage('Test') {
             steps {
-                bat '''
-                venv\\Scripts\\python -m pytest --cov=. --cov-report=xml --cov-report=term
-                '''
+                bat 'venv\\Scripts\\python -m pytest --cov=. --cov-report=xml --cov-report=term'
             }
         }
 
@@ -54,45 +51,36 @@ pipeline {
             }
         }
 
-        stage('Push Docker Image') {
+        stage('Push Docker Image to ECR') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: '53dd520f-3072-4b33-807e-55518476daed',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'
+                ]]) {
                     bat '''
-                    echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
-                    docker push %IMAGE_NAME%:%IMAGE_TAG%
+                    aws ecr get-login-password --region %AWS_REGION% | docker login --username AWS --password-stdin %AWS_ACCOUNT_ID%.dkr.ecr.%AWS_REGION%.amazonaws.com
+                    docker tag %IMAGE_NAME%:%IMAGE_TAG% %ECR_REPO%:%IMAGE_TAG%
+                    docker push %ECR_REPO%:%IMAGE_TAG%
                     '''
                 }
             }
         }
 
-        stage('Deploy to Kubernetes') {
+        stage('Deploy to EKS') {
             steps {
-                bat '''
-                kubectl config use-context minikube
-                kubectl config current-context
-                kubectl get ns
-                kubectl get deployment -n aceest
-
-                kubectl set image deployment/aceest-fitness aceest-fitness=%IMAGE_NAME%:%IMAGE_TAG% -n aceest
-                kubectl rollout status deployment/aceest-fitness -n aceest
-                '''
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'
+                ]]) {
+                    bat '''
+                    aws eks update-kubeconfig --region %AWS_REGION% --name %EKS_CLUSTER_NAME%
+                    kubectl config current-context
+                    kubectl get deployment -n aceest
+                    kubectl set image deployment/aceest-fitness aceest-fitness=%ECR_REPO%:%IMAGE_TAG% -n aceest
+                    kubectl rollout status deployment/aceest-fitness -n aceest
+                    '''
+                }
             }
-        }
-    }
-
-    post {
-        failure {
-            bat '''
-            kubectl config current-context >nul 2>&1
-            if %ERRORLEVEL% NEQ 0 exit /b 0
-
-            kubectl rollout undo deployment/aceest-fitness -n aceest
-            if %ERRORLEVEL% NEQ 0 exit /b 0
-            '''
         }
     }
 }
